@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="description"
+    content="桃園分區圖SDE與向量圖磚比較。向量圖磚速度快，目前成果無法呈現內圈上色效果。向量圖磚需要使用ArcGIS Pro 並且有 Portal for ArcGIS 才能發布。 " />
+  <title>桃園分區圖向量圖磚測試</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.17/esri/themes/dark/main.css" />
+  <script src="https://js.arcgis.com/4.17/"></script>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    #changeVTstyleDiv {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      padding: 12px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+    }
+  </style>
+  <!--
+ArcGIS 向量圖磚軟體需求
+	https://enterprise.arcgis.com/en/server/latest/publish-services/windows/vector-tile-services.htm
+
+  ● ArcGIS Server (10.4 and later)
+  ● Portal for ArcGIS (10.4 and later)
+  ● ArcGIS Pro (1.2 and later)
+
+ArcGIS Pro 發布向量圖磚作業方式
+	http://zhihu.geoscene.cn/article/4071
+
+公司線上展示網址
+	https://www.leica.com.tw/demo/2020_1123_TyUrbanzoneVectorTileTest.html
+
+向量圖磚的一些限制
+  https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-VectorTileLayer.html
+
+  ● 列印功能需要 ArcGIS Server 10.5.1 之後版本
+  ● 呈現的圖例會與原有 mxd 不同
+  ● API 功能主要支援 Map ，3D 的部分有限制
+
+  ● Vector tile layers have the best performance on machines with newer hardware.
+● In some cases, labels along vector tile boundaries may collide with labels from the neighboring tile.
+● VectorTileLayer printing requires ArcGIS Server 10.5.1 or later.
+● For printing secure VectorTileLayers with ArcGIS Server 10.5.1 or 10.6.0, the PrintTask will create a client-side image for the VectorTileLayer to use in the printout. This has some limitations related to large size printing ●quality and a dependency on browser window height/width ratio.
+
+-->
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/TileLayer",
+      "esri/widgets/LayerList",
+      "esri/layers/VectorTileLayer",
+      "esri/layers/MapImageLayer",
+      "esri/widgets/Swipe",
+      "esri/widgets/Expand"
+      , "esri/views/SceneView", "esri/WebScene"
+    ], function (Map, MapView, TileLayer, LayerList, VectorTileLayer, MapImageLayer, Swipe, Expand
+      , SceneView, WebScene
+    ) {
+
+      const map = new Map({
+        basemap: "satellite"
+      });
+
+      const map_layer = new MapImageLayer({
+        title: "桃園使用分區(框)_SDE",
+        url: "https://urbandatasrv.tycg.gov.tw/arcgis/rest/services/TY_UPGIS/TYMap_SDE/MapServer",
+        sublayers: [
+          {
+            id: 38,
+            title: "都市計畫使用分區(標記)",
+            visible: true
+          },
+          {
+            id: 25,
+            title: "都市計畫使用分區_SDE_框",
+            visible: true
+          }
+        ]
+      });
+      map.add(map_layer);
+
+      var vtile_Layer = new VectorTileLayer({
+        title: "桃園使用分區(框)_向量圖磚 (28 MB)",
+        //url: "https://urplanning.tycg.gov.tw/server/rest/services/Hosted/tyUrbanZoneVT_max/VectorTileServer"
+		url: "https://uparcgis.tycg.gov.tw/server/rest/services/Hosted/tyUrbanZoneVT_Indexed_scale_to_1_35/VectorTileServer"
+      });
+      map.add(vtile_Layer);
+      //console.log(vtile_Layer);
+
+      var raw_vt_style;
+      var new_vt_style;
+      // 建立樣式物件
+      vtile_Layer.on("layerview-create", function (event) {
+
+        // 複製原始樣式物件
+        raw_vt_style = JSON.parse(JSON.stringify(event.layerView.layer.currentStyleInfo.style));
+        // 新樣式物件
+        new_vt_style = JSON.parse(JSON.stringify(event.layerView.layer.currentStyleInfo.style));
+
+        //console.log(vt_style2.layers);		   
+        for (var i = 0; i < new_vt_style.layers.length; i++) {
+
+
+          // //https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/#paint-property
+          // if (new_vt_style.layers[i].id.indexOf("商") != -1) {
+          //   new_vt_style.layers[i].paint["fill-color"] = "#ffffff";
+          //   new_vt_style.layers[i].paint["line-color"] = "#ff0000";
+          //   new_vt_style.layers[i].paint["fill-outline-color"] = "#ff0000";
+          //   new_vt_style.layers[i].paint["line-width"] = 0.1;
+          // }
+          // else {
+          //   new_vt_style.layers[i].paint["fill-color"] = "";
+          //   new_vt_style.layers[i].paint["line-color"] = "";
+          //   new_vt_style.layers[i].paint["fill-outline-color"] = "";
+          //   new_vt_style.layers[i].paint["line-width"] = 0;
+          // }
+
+          new_vt_style.layers[i].paint["fill-color"] = "#ffffff";
+          new_vt_style.layers[i].paint["line-color"] = "#ff0000";
+          new_vt_style.layers[i].paint["fill-outline-color"] = "#ff0000";
+          new_vt_style.layers[i].paint["line-width"] = 0.1;
+        };
+
+      });
+
+      // var view = new SceneView({
+      //   map: map,
+      //   container: "viewDiv",
+      //   padding: {
+      //     top: 40
+      //   }
+      // });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        zoom: 14,
+        center: [121.253, 24.980],
+        constraints: {
+          maxZoom: 23,
+          minZoom: 8
+        }
+      });
+
+      const layerList = new LayerList({
+        view: view
+      });
+      const llExpand = new Expand({
+        view: view,
+        content: layerList,
+        expanded: false
+      });
+      view.ui.add(llExpand, "top-right");
+
+      const swipe = new Swipe({
+        leadingLayers: [map_layer],
+        trailingLayers: [vtile_Layer],
+        position: 50,
+        view: view
+      });
+      view.ui.add(swipe);
+
+      // 樣式切換
+      view.when(function () {
+        document
+          .getElementById("vt_style_change")
+          .addEventListener("change", updateVtStyle);
+
+        function updateVtStyle(ev) {
+          if (ev.target.checked) {
+            for (var i = 0; i < new_vt_style.layers.length; i++) {
+              vtile_Layer.setPaintProperties(new_vt_style.layers[i].id, new_vt_style.layers[i].paint);
+            }
+          }
+          else {
+            for (var i = 0; i < raw_vt_style.layers.length; i++) {
+              vtile_Layer.setPaintProperties(raw_vt_style.layers[i].id, raw_vt_style.layers[i].paint);
+            }
+          }
+        }
+      });
+
+
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+  <div id="changeVTstyleDiv" class="esri-widget">
+    <label>樣式切換: <input id="vt_style_change" type="checkbox" /></label>
+  </div>
+</body>
+
+</html>
